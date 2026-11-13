@@ -16,6 +16,11 @@ RUN pip install --no-cache-dir -r requirements.txt \
  && (pip uninstall -y setuptools wheel >/dev/null 2>&1 || true) \
  && pip uninstall -y pip
 
+# Commit the image was built from (read back by rebuild.sh). Declared after the
+# dependency layers so a new commit doesn't invalidate the pip install cache.
+ARG GIT_COMMIT=unknown
+ENV GIT_COMMIT=$GIT_COMMIT
+
 COPY --chown=root:root app/ /app/
 RUN chmod -R a-w /app \
  && mkdir -p /data /run/sock && chown sgapp:sgapp /data /run/sock && chmod 0770 /run/sock

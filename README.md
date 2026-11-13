@@ -31,6 +31,20 @@ The app **refuses to start** if the password is weak: it needs 16+
 characters including 3 of lowercase / uppercase / digits / symbols, or 24+
 characters of anything.
 
+### Updating
+
+On the Docker host, from anywhere:
+
+```bash
+./rebuild.sh                     # pull origin/main; rebuild + restart only if changed
+./rebuild.sh --force             # rebuild + restart regardless
+./rebuild.sh --pull-base-images  # also fetch a newer python base image (slower)
+```
+
+It discards local edits to tracked files (`settings.env` and `data/` are
+untracked and left alone), builds with `docker buildx`, stamps the image with
+the git commit, and skips the rebuild when the running image already matches.
+
 ### HTTPS: Nginx Proxy Manager (local) + Cloudflare Tunnel (external)
 
 ```
