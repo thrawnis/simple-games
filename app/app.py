@@ -167,13 +167,14 @@ def security_headers(resp):
     return resp
 
 
+def admin_reachable() -> bool:
+    """False when /admin is refused for this request (it came via Cloudflare)."""
+    return ADMIN_VIA_CLOUDFLARE or not any(h in request.headers for h in CLOUDFLARE_HEADERS)
+
+
 @app.before_request
 def block_admin_from_internet():
-    if (
-        not ADMIN_VIA_CLOUDFLARE
-        and request.path.startswith("/admin")
-        and any(h in request.headers for h in CLOUDFLARE_HEADERS)
-    ):
+    if request.path.startswith("/admin") and not admin_reachable():
         abort(404)
 
 
@@ -214,6 +215,8 @@ def csrf_token() -> str:
 
 app.jinja_env.globals["csrf_token"] = csrf_token
 app.jinja_env.globals["site_title"] = SITE_TITLE
+# Used by base.html to show the small admin icon only where /admin works.
+app.jinja_env.globals["admin_reachable"] = admin_reachable
 
 
 def check_csrf() -> None:

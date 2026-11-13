@@ -9,7 +9,15 @@
 <body>
   <header class="top">
     <a class="brand" href="{{ url_for('index') }}">{{ site_title }}</a>
-    {% block nav %}{% endblock %}
+    {% block nav %}
+      {% if admin_reachable() %}
+      <a class="admin-icon" href="{{ url_for('admin_home') }}" title="Admin" aria-label="Admin">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
+          <path fill="currentColor" d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 0 1 6 0v3H9z"/>
+        </svg>
+      </a>
+      {% endif %}
+    {% endblock %}
   </header>
   <main>
     {% with messages = get_flashed_messages(with_categories=true) %}

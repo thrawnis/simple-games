@@ -161,3 +161,9 @@ def test_admin_blocked_via_cloudflare(client):
     assert client.get("/", headers=cf).status_code == 200
     assert client.get("/play/game", headers=cf).status_code == 200
     assert client.get("/admin").status_code == 200  # local access still works
+
+
+def test_admin_icon_only_where_admin_works(client):
+    assert 'class="admin-icon"' in client.get("/").get_data(as_text=True)
+    cf = {"Cf-Ray": "abc123-LHR"}
+    assert 'class="admin-icon"' not in client.get("/", headers=cf).get_data(as_text=True)

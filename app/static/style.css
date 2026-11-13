@@ -33,3 +33,5 @@ td.actions { display:flex; gap:12px; }
 .flash.error { border-color:var(--bad); color:var(--bad); }
 .flash.ok { border-color:var(--good); color:var(--good); }
 code { font-size:.88em; }
+.admin-icon { display:inline-flex; padding:4px; border-radius:4px; color:var(--muted); opacity:.45; line-height:0; }
+.admin-icon:hover, .admin-icon:focus-visible { opacity:1; color:var(--accent); }
