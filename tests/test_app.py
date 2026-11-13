@@ -18,6 +18,8 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("DATA_DIR", str(tmp_path))
     monkeypatch.setenv("KEEP_VERSIONS", "3")
     monkeypatch.setenv("MAX_UPLOAD_KB", "10")
+    monkeypatch.setenv("COOKIE_SECURE", "false")  # test client uses http
+    monkeypatch.delenv("ADMIN_VIA_CLOUDFLARE", raising=False)
     sys.modules.pop("app", None)
     mod = importlib.import_module("app")
     mod.app.config["TESTING"] = True
@@ -148,3 +150,14 @@ def test_names_escaped(client):
     create(client, "<script>alert(1)</script>", "xss")
     html = client.get("/").get_data(as_text=True)
     assert "<script>alert(1)" not in html and "&lt;script&gt;" in html
+
+
+def test_admin_blocked_via_cloudflare(client):
+    login(client)
+    create(client, "Game", "game")
+    cf = {"Cf-Ray": "abc123-LHR", "Cf-Connecting-Ip": "203.0.113.9"}
+    assert client.get("/admin", headers=cf).status_code == 404
+    assert client.get("/admin/login", headers=cf).status_code == 404
+    assert client.get("/", headers=cf).status_code == 200
+    assert client.get("/play/game", headers=cf).status_code == 200
+    assert client.get("/admin").status_code == 200  # local access still works

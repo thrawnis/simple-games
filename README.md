@@ -31,16 +31,54 @@ The app **refuses to start** if the password is weak: it needs 16+
 characters including 3 of lowercase / uppercase / digits / symbols, or 24+
 characters of anything.
 
-### HTTPS (strongly recommended)
+### HTTPS: Nginx Proxy Manager (local) + Cloudflare Tunnel (external)
 
-The admin password travels over the connection, so put the site behind HTTPS
-before using it over the internet. The easiest way is a reverse proxy such as
-Caddy on the same host:
+```
+LAN users ──https──► Nginx Proxy Manager ─┐
+                                          ├─► :8080 (this stack's nginx) ─► app (no network)
+Internet ──https──► Cloudflare ─► cloudflared ─┘
+```
 
-1. In `docker-compose.yml` change the port to `"127.0.0.1:8080:8080"`.
-2. Point Caddy (or nginx/Traefik) at `127.0.0.1:8080`, e.g. a Caddyfile:
-   `games.example.com { reverse_proxy 127.0.0.1:8080 }`
-3. Set `COOKIE_SECURE=true` in `settings.env` and `docker compose up -d`.
+Both routes are HTTPS, so `COOKIE_SECURE=true` (the default) is correct.
+
+**Nginx Proxy Manager** – add a Proxy Host:
+- Domain: e.g. `games.home.lan` · Scheme `http` · Forward host: this server's
+  IP · Forward port `8080`
+- SSL tab: your certificate, enable *Force SSL*. Websockets/caching: off.
+- Use this local address for the admin area: `https://games.home.lan/admin`.
+
+**Cloudflare Tunnel** – add a Public Hostname:
+- e.g. `games.example.com` → Service `HTTP` → `<server IP>:8080`
+  (or point it at NPM if you prefer — both work).
+- In the Cloudflare dashboard for that hostname, **turn off Rocket Loader**
+  (Speed → Optimization). It rewrites `<script>` tags and would stop games
+  from running. Email Obfuscation can also be turned off. Other features are
+  fine.
+
+**Admin is local-only by default.** Any request that arrives through
+Cloudflare (it always carries Cloudflare's `CF-Ray` / `CF-Connecting-IP`
+headers, which visitors can't strip) gets a 404 for `/admin`. The public game
+list and games work normally over the tunnel. If you really want to manage
+games from outside, set `ADMIN_VIA_CLOUDFLARE=true` **and** protect
+`games.example.com/admin*` with a Cloudflare Access (Zero Trust) policy, so
+only your account can even reach the login page.
+
+**Real client IPs.** This stack's nginx trusts `X-Forwarded-For` only from
+private-network addresses (where NPM and cloudflared run) and picks the
+right-most address that isn't one of them, which a visitor can't forge. That
+is what the login lockout and rate limits use. To tighten it, replace the
+`set_real_ip_from` ranges in `nginx.conf` with the exact IPs of your NPM and
+cloudflared hosts/containers.
+
+**Port 8080.** Only NPM and cloudflared need to reach it. Firewall it so
+nothing else on your LAN can connect (e.g. `ufw allow from <NPM-IP> to any
+port 8080`), or, if NPM and cloudflared run on this same machine with host
+networking, change the port in `docker-compose.yml` to `"127.0.0.1:8080:8080"`.
+Logging in via plain `http://<ip>:8080` won't work while `COOKIE_SECURE=true` –
+that's deliberate.
+
+HSTS isn't set by the app; turn it on in Cloudflare (SSL/TLS → Edge
+Certificates) and/or NPM if you want it.
 
 ## Files on the host
 
@@ -59,7 +97,8 @@ password; keep it `chmod 600` and never commit it (it is git-ignored).
 |---|---|---|
 | `ADMIN_PASSWORD` | – | Admin password (required, must be strong) |
 | `SECRET_KEY` | random per start | Signs the admin login cookie |
-| `COOKIE_SECURE` | `false` | Set `true` once served over HTTPS |
+| `COOKIE_SECURE` | `true` | Login cookie only sent over HTTPS |
+| `ADMIN_VIA_CLOUDFLARE` | `false` | Allow `/admin` through Cloudflare Tunnel (use with Cloudflare Access) |
 | `SITE_TITLE` | `Simple Games` | Shown in the header |
 | `MAX_UPLOAD_KB` | `5120` | Max size of one HTML file (also raise `client_max_body_size` in `nginx.conf` if you go above ~5.5 MB) |
 | `KEEP_VERSIONS` | `50` | Versions kept per game |
@@ -106,8 +145,9 @@ can get from the app to the host machine.
 **Admin login**
 
 - Strong password enforced at start-up; compared in constant time.
-- Brute-force protection: per-IP lockout after 5 failures, plus nginx rate
-  limiting on the login URL.
+- Admin area refused over Cloudflare Tunnel by default (local network only).
+- Brute-force protection: per-IP lockout after 5 failures (using the real
+  client IP from NPM / Cloudflare), plus nginx rate limiting on the login URL.
 - Session cookie is `HttpOnly`, `SameSite=Strict`, scoped to `/admin`, signed,
   and expires. All admin actions require a CSRF token.
 - Strict security headers on every page (CSP, no framing, no sniffing,
