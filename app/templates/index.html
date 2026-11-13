@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Games</h1>
+{% if games %}
+<ul class="games">
+  {% for g in games %}
+  <li><a href="{{ url_for('play', slug=g.slug) }}">{{ g.name }}</a></li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="muted">No games yet.</p>
+{% endif %}
+{% endblock %}
