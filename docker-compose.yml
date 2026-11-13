@@ -44,9 +44,10 @@ services:
       app:
         condition: service_healthy
     ports:
-      # Change to "127.0.0.1:8080:8080" if you put your own HTTPS reverse
+      # Host port 35838 (chosen at random) -> nginx's 8080 inside the container.
+      # Change to "127.0.0.1:35838:8080" if you put your own HTTPS reverse
       # proxy (Caddy, Traefik, nginx...) in front on the same host.
-      - "8080:8080"
+      - "35838:8080"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - sock:/run/sock

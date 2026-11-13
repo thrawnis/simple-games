@@ -21,9 +21,10 @@ git clone <this repo> simple-games && cd simple-games
 docker compose up -d --build
 ```
 
-Open `http://<server>:8080/` for the site and `http://<server>:8080/admin`
-for the admin area. The admin password was printed by `setup.sh` and is in
-`settings.env`.
+The stack listens on port **35838**. Point Nginx Proxy Manager / Cloudflare
+Tunnel at `<server IP>:35838` (see below), then open `https://<your-hostname>/`
+for the site and `https://<your-hostname>/admin` for the admin area. The admin
+password was printed by `setup.sh` and is in `settings.env`.
 
 To change the password, edit `ADMIN_PASSWORD` in `settings.env` and run
 `docker compose up -d` (this recreates the container with the new settings).
@@ -49,7 +50,7 @@ the git commit, and skips the rebuild when the running image already matches.
 
 ```
 LAN users ──https──► Nginx Proxy Manager ─┐
-                                          ├─► :8080 (this stack's nginx) ─► app (no network)
+                                          ├─► :35838 (this stack's nginx) ─► app (no network)
 Internet ──https──► Cloudflare ─► cloudflared ─┘
 ```
 
@@ -57,12 +58,12 @@ Both routes are HTTPS, so `COOKIE_SECURE=true` (the default) is correct.
 
 **Nginx Proxy Manager** – add a Proxy Host:
 - Domain: e.g. `games.home.lan` · Scheme `http` · Forward host: this server's
-  IP · Forward port `8080`
+  IP · Forward port `35838`
 - SSL tab: your certificate, enable *Force SSL*. Websockets/caching: off.
 - Use this local address for the admin area: `https://games.home.lan/admin`.
 
 **Cloudflare Tunnel** – add a Public Hostname:
-- e.g. `games.example.com` → Service `HTTP` → `<server IP>:8080`
+- e.g. `games.example.com` → Service `HTTP` → `<server IP>:35838`
   (or point it at NPM if you prefer — both work).
 - In the Cloudflare dashboard for that hostname, **turn off Rocket Loader**
   (Speed → Optimization). It rewrites `<script>` tags and would stop games
@@ -84,11 +85,11 @@ is what the login lockout and rate limits use. To tighten it, replace the
 `set_real_ip_from` ranges in `nginx.conf` with the exact IPs of your NPM and
 cloudflared hosts/containers.
 
-**Port 8080.** Only NPM and cloudflared need to reach it. Firewall it so
+**Port 35838.** Only NPM and cloudflared need to reach it. Firewall it so
 nothing else on your LAN can connect (e.g. `ufw allow from <NPM-IP> to any
-port 8080`), or, if NPM and cloudflared run on this same machine with host
-networking, change the port in `docker-compose.yml` to `"127.0.0.1:8080:8080"`.
-Logging in via plain `http://<ip>:8080` won't work while `COOKIE_SECURE=true` –
+port 35838`), or, if NPM and cloudflared run on this same machine with host
+networking, change the port in `docker-compose.yml` to `"127.0.0.1:35838:8080"`.
+Logging in via plain `http://<ip>:35838` won't work while `COOKIE_SECURE=true` –
 that's deliberate.
 
 HSTS isn't set by the app; turn it on in Cloudflare (SSL/TLS → Edge
