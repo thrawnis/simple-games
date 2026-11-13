@@ -1,0 +1,69 @@
+# Simple Games Engine
+#
+#   ./setup.sh             # first time only: creates settings.env + ./data
+#   docker compose up -d --build
+#
+# Security model (see README.md):
+#  - Only ./data on the host is shared with the app, nothing else.
+#  - Both containers run as non-root, read-only, with all Linux capabilities
+#    dropped and privilege escalation blocked.
+#  - The app container has NO network (network_mode: none): it cannot reach
+#    the internet, your LAN, or any service on the host machine. nginx talks
+#    to it through a Unix socket on a private Docker volume.
+
+services:
+  app:
+    build: .
+    image: simple-games-engine:latest
+    env_file: settings.env
+    environment:
+      DATA_DIR: /data
+      TRUST_PROXY: "1"          # requests always come via the proxy below
+    volumes:
+      - ./data:/data:rw         # the ONLY host path the app can see
+      - sock:/run/sock          # private Docker volume holding the socket
+    network_mode: none
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777,noexec,nosuid,nodev
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 1.0
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  proxy:
+    image: nginxinc/nginx-unprivileged:1.27-alpine
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      # Change to "127.0.0.1:8080:8080" if you put your own HTTPS reverse
+      # proxy (Caddy, Traefik, nginx...) in front on the same host.
+      - "8080:8080"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - sock:/run/sock
+    group_add: ["10001"]        # allowed to connect to the app socket
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777,noexec,nosuid,nodev
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    mem_limit: 64m
+    cpus: 0.5
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+volumes:
+  sock: {}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{{ game.name }} · Admin{% endblock %}
+{% block nav %}{% include "admin_nav.html" %}{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('admin_home') }}">&larr; All games</a></p>
+<h1>{{ game.name }}</h1>
+<p class="muted">Id <code>{{ game.slug }}</code> · created {{ game.created_at }} ·
+  {% if game.latest %}<a href="{{ url_for('play', slug=game.slug) }}" target="_blank" rel="noopener">Play live version</a>{% else %}no versions{% endif %}</p>
+
+<h2>Upload a new version</h2>
+<form method="post" action="{{ url_for('upload_version', slug=game.slug) }}" enctype="multipart/form-data" class="card">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <label>HTML file (max {{ max_kb }} KB) <input type="file" name="file" accept=".html,.htm,text/html" required></label>
+  <label>Note (optional) <input name="note" maxlength="200"></label>
+  <button type="submit">Upload &amp; make live</button>
+</form>
+
+<h2>History <span class="muted">(last {{ keep }} kept; only the newest is playable)</span></h2>
+<table>
+  <thead><tr><th>Version</th><th>Uploaded</th><th>Size</th><th>File</th><th>Note</th><th>SHA-256</th><th></th></tr></thead>
+  <tbody>
+  {% for v in game.versions|reverse %}
+  <tr{% if loop.first %} class="live"{% endif %}>
+    <td>{{ v.number }}{% if loop.first %} <span class="badge">live</span>{% endif %}</td>
+    <td>{{ v.uploaded_at }}</td>
+    <td>{{ (v.size / 1024)|round(1) }} KB</td>
+    <td>{{ v.original_filename }}</td>
+    <td>{{ v.note }}</td>
+    <td><code title="{{ v.sha256 }}">{{ v.sha256[:12] }}</code></td>
+    <td class="actions">
+      <a href="{{ url_for('download_version', slug=game.slug, number=v.number) }}">Download</a>
+      {% if not loop.first %}
+      <form method="post" action="{{ url_for('restore_version', slug=game.slug, number=v.number) }}" class="inline">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+        <button type="submit" class="link">Restore</button>
+      </form>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<h2>Rename</h2>
+<form method="post" action="{{ url_for('rename_game', slug=game.slug) }}" class="card">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <label>Name <input name="name" value="{{ game.name }}" maxlength="100" required></label>
+  <button type="submit">Save</button>
+</form>
+
+<h2>Delete</h2>
+<form method="post" action="{{ url_for('delete_game', slug=game.slug) }}" class="card danger">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <label>Type <code>{{ game.slug }}</code> to permanently delete this game and all versions
+    <input name="confirm" required autocomplete="off"></label>
+  <button type="submit" class="danger">Delete game</button>
+</form>
+{% endblock %}
