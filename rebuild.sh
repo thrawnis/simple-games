@@ -78,6 +78,9 @@ if [ "$OLD_HEAD" = "$NEW_HEAD" ]; then
   if [ "$IMAGE_COMMIT" = "$SHORT_SHA" ] && [ "$FORCE" -eq 0 ] && [ "$PULL_BASE" -eq 0 ]; then
     echo "==> Already up to date ($SHORT_SHA); image matches. Nothing to do."
     echo "    (Use --force to rebuild anyway.)"
+    # Machine-readable marker for Deployment Helper. Quoted: an unquoted # would
+    # start a bash comment. Exactly one DEPLOY_STATUS line is printed per run.
+    echo "##DEPLOY_STATUS:NO_CHANGE##"
     exit 0
   fi
   if [ "$IMAGE_COMMIT" != "$SHORT_SHA" ]; then
@@ -89,6 +92,10 @@ if [ "$OLD_HEAD" = "$NEW_HEAD" ]; then
 else
   echo "==> Updated ${OLD_HEAD:0:12} -> $SHORT_SHA"
 fi
+
+# Past the skip check, so the app is going to be rebuilt and redeployed. Printed
+# before the build so it reflects what was detected, not whether the build works.
+echo "##DEPLOY_STATUS:UPDATED##"
 
 # --- 3. Host directories -----------------------------------------------------
 # Create bind-mount sources ourselves; otherwise Docker creates them as root.
