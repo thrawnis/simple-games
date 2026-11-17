@@ -28,7 +28,8 @@ RUN chmod -R a-w /app \
 USER 10001:10001
 # The container has no network at all; it is reached only through a Unix
 # socket shared with the nginx proxy container.
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=20s --start-interval=2s CMD ["python", "/app/healthcheck.py"]
+# (Monitoring only - `docker compose ps` shows the result; nothing waits on it.)
+HEALTHCHECK --interval=15s --timeout=10s --retries=3 --start-period=30s CMD ["python", "/app/healthcheck.py"]
 
 # One worker process (keeps the login rate-limiter in one place) with threads.
 # umask 007 => socket is rw for the sgapp group only (nginx is added to it).
