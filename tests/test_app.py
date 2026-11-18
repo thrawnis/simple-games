@@ -55,12 +55,19 @@ def create(c, name, slug="", body=b"<h1>v1</h1>"):
     )
 
 
-def test_weak_password_refused(tmp_path, monkeypatch):
-    monkeypatch.setenv("ADMIN_PASSWORD", "short")
+def test_empty_password_refused(tmp_path, monkeypatch):
+    monkeypatch.setenv("ADMIN_PASSWORD", "")
     monkeypatch.setenv("DATA_DIR", str(tmp_path))
     sys.modules.pop("app", None)
     with pytest.raises(SystemExit):
         importlib.import_module("app")
+
+
+def test_simple_password_accepted(tmp_path, monkeypatch):
+    monkeypatch.setenv("ADMIN_PASSWORD", "abc")
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    sys.modules.pop("app", None)
+    importlib.import_module("app")
 
 
 def test_admin_requires_login(client):

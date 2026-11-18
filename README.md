@@ -17,7 +17,7 @@ Requirements: Docker with the Compose plugin, on Linux.
 
 ```bash
 git clone <this repo> simple-games && cd simple-games
-./setup.sh                    # creates settings.env (random strong password) and ./data
+./setup.sh                    # creates settings.env (random password) and ./data
 docker compose up -d --build
 ```
 
@@ -28,9 +28,8 @@ password was printed by `setup.sh` and is in `settings.env`.
 
 To change the password, edit `ADMIN_PASSWORD` in `settings.env` and run
 `docker compose up -d` (this recreates the container with the new settings).
-The app **refuses to start** if the password is weak: it needs 16+
-characters including 3 of lowercase / uppercase / digits / symbols, or 24+
-characters of anything.
+Any non-empty password is accepted; the app only refuses to start if it is
+empty. Login attempts are rate-limited and locked out after repeated failures.
 
 ### Updating
 
@@ -110,7 +109,7 @@ password; keep it `chmod 600` and never commit it (it is git-ignored).
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `ADMIN_PASSWORD` | – | Admin password (required, must be strong) |
+| `ADMIN_PASSWORD` | – | Admin password (required, any non-empty value) |
 | `SECRET_KEY` | random per start | Signs the admin login cookie |
 | `COOKIE_SECURE` | `true` | Login cookie only sent over HTTPS |
 | `ADMIN_VIA_CLOUDFLARE` | `false` | Allow `/admin` through Cloudflare Tunnel (use with Cloudflare Access) |
@@ -159,7 +158,7 @@ can get from the app to the host machine.
 
 **Admin login**
 
-- Strong password enforced at start-up; compared in constant time.
+- Password read from `settings.env` and compared in constant time (no strength rules; empty is refused).
 - Admin area refused over Cloudflare Tunnel by default (local network only).
 - Brute-force protection: per-IP lockout after 5 failures (using the real
   client IP from NPM / Cloudflare), plus nginx rate limiting on the login URL.

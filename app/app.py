@@ -27,9 +27,6 @@ from storage import Storage, StorageError, slugify, validate_html
 # ---------------------------------------------------------------------------
 # Configuration (from settings.env via docker compose `env_file`)
 # ---------------------------------------------------------------------------
-PLACEHOLDER_PASSWORDS = {"change-me", "changeme", "password", "replace-with-a-strong-password"}
-
-
 def _env_bool(name: str, default: bool) -> bool:
     return os.environ.get(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
 
@@ -41,38 +38,11 @@ def _env_int(name: str, default: int) -> int:
         sys.exit(f"FATAL: {name} must be an integer")
 
 
-def password_problems(pw: str) -> list[str]:
-    problems = []
-    if pw.lower() in PLACEHOLDER_PASSWORDS:
-        problems.append("it is still the example placeholder")
-    if len(pw) < 16:
-        problems.append("it must be at least 16 characters long")
-    classes = sum(
-        [
-            any(c.islower() for c in pw),
-            any(c.isupper() for c in pw),
-            any(c.isdigit() for c in pw),
-            any(not c.isalnum() for c in pw),
-        ]
-    )
-    if len(pw) < 24 and classes < 3:
-        problems.append(
-            "passwords shorter than 24 characters need at least 3 of: "
-            "lowercase, uppercase, digits, symbols"
-        )
-    if len(set(pw)) < 8:
-        problems.append("it has too few distinct characters")
-    return problems
-
-
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
-_problems = password_problems(ADMIN_PASSWORD)
-if _problems:
-    sys.exit(
-        "FATAL: ADMIN_PASSWORD in settings.env is not strong enough: "
-        + "; ".join(_problems)
-        + ". Run ./setup.sh to generate one."
-    )
+# No strength rules, but never allow an empty password: it would let anyone
+# log in with a blank field.
+if not ADMIN_PASSWORD:
+    sys.exit("FATAL: ADMIN_PASSWORD is not set in settings.env.")
 
 DATA_DIR = os.environ.get("DATA_DIR", "/data")
 MAX_UPLOAD_KB = _env_int("MAX_UPLOAD_KB", 5120)
