@@ -38,6 +38,7 @@ def _env_int(name: str, default: int) -> int:
         sys.exit(f"FATAL: {name} must be an integer")
 
 
+ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 # No strength rules, but never allow an empty password: it would let anyone
 # log in with a blank field.
@@ -253,8 +254,12 @@ def login():
                 "error",
             )
             return render_template("login.html"), 429
+        supplied_user = request.form.get("username", "")
         supplied = request.form.get("password", "")
-        if hmac.compare_digest(supplied.encode(), ADMIN_PASSWORD.encode()):
+        # Check both (no short-circuit) so timing doesn't reveal which was wrong.
+        user_ok = hmac.compare_digest(supplied_user.encode(), ADMIN_USERNAME.encode())
+        pass_ok = hmac.compare_digest(supplied.encode(), ADMIN_PASSWORD.encode())
+        if user_ok and pass_ok:
             _failures.pop(ip, None)
             session.clear()
             session.permanent = True
@@ -263,7 +268,7 @@ def login():
             return redirect(url_for("admin_home"))
         _record_failure(ip)
         time.sleep(1)  # slow down guessing
-        flash("Incorrect password.", "error")
+        flash("Incorrect username or password.", "error")
         return render_template("login.html"), 401
     return render_template("login.html")
 

@@ -26,6 +26,8 @@ Tunnel at `<server IP>:35838` (see below), then open `https://<your-hostname>/`
 for the site and `https://<your-hostname>/admin` for the admin area. The admin
 password was printed by `setup.sh` and is in `settings.env`.
 
+The login page asks for a username (`admin` by default) and the password.
+
 To change the password, edit `ADMIN_PASSWORD` in `settings.env` and run
 `docker compose up -d` (this recreates the container with the new settings).
 Any non-empty password is accepted; the app only refuses to start if it is
@@ -109,6 +111,7 @@ password; keep it `chmod 600` and never commit it (it is git-ignored).
 
 | Setting | Default | Meaning |
 |---|---|---|
+| `ADMIN_USERNAME` | `admin` | Username typed at the login page (case-sensitive) |
 | `ADMIN_PASSWORD` | – | Admin password (required, any non-empty value) |
 | `SECRET_KEY` | random per start | Signs the admin login cookie |
 | `COOKIE_SECURE` | `true` | Login cookie only sent over HTTPS |

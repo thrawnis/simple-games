@@ -34,7 +34,7 @@ def csrf(c, path):
 
 
 def login(c):
-    r = c.post("/admin/login", data={"password": PW, "csrf": csrf(c, "/admin/login")})
+    r = c.post("/admin/login", data={"username": "admin", "password": PW, "csrf": csrf(c, "/admin/login")})
     assert r.status_code == 302
 
 
@@ -79,9 +79,9 @@ def test_wrong_password_and_lockout(client, monkeypatch):
     import app as mod
     monkeypatch.setattr(mod.time, "sleep", lambda s: None)
     for _ in range(5):
-        r = client.post("/admin/login", data={"password": "nope", "csrf": csrf(client, "/admin/login")})
+        r = client.post("/admin/login", data={"username": "admin", "password": "nope", "csrf": csrf(client, "/admin/login")})
         assert r.status_code == 401
-    r = client.post("/admin/login", data={"password": PW, "csrf": csrf(client, "/admin/login")})
+    r = client.post("/admin/login", data={"username": "admin", "password": PW, "csrf": csrf(client, "/admin/login")})
     assert r.status_code == 429
 
 
@@ -174,3 +174,13 @@ def test_admin_icon_only_where_admin_works(client):
     assert 'class="admin-icon"' in client.get("/").get_data(as_text=True)
     cf = {"Cf-Ray": "abc123-LHR"}
     assert 'class="admin-icon"' not in client.get("/", headers=cf).get_data(as_text=True)
+
+
+def test_username_required_and_checked(client):
+    def attempt(**kw):
+        return client.post("/admin/login", data={"csrf": csrf(client, "/admin/login"), **kw}).status_code
+    assert attempt(password=PW) == 401                       # username missing
+    assert attempt(username="root", password=PW) == 401      # wrong username
+    assert attempt(username="Admin", password=PW) == 401     # case-sensitive
+    assert attempt(username="admin", password="wrong") == 401
+    assert attempt(username="admin", password=PW) == 302
