@@ -20,6 +20,7 @@ import os
 import re
 import shutil
 import tempfile
+import unicodedata
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -58,6 +59,8 @@ class Game:
 
 
 def slugify(text: str) -> str:
+    """URL-friendly id: accents folded to ASCII, lowercase, a-z 0-9 and dashes."""
+    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
     slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
     return slug[:64].strip("-")
 
@@ -189,20 +192,23 @@ class Storage:
         return self.version_path(slug, game.latest.number)
 
     # ----- write API -----------------------------------------------------
-    def create_game(self, name: str, slug: str) -> Game:
+    def create_game(self, name: str) -> Game:
+        """Create a game; its URL id is derived from the name.
+
+        "Space Invaders!" -> space-invaders. If that id is taken, -2, -3, ...
+        is appended. A name with no usable characters falls back to "game".
+        """
         name = _clean_text(name, MAX_NAME_LEN)
         if not name:
             raise StorageError("Game name is required.")
-        slug = (slug or "").strip().lower() or slugify(name)
-        if not SLUG_RE.fullmatch(slug):
-            raise StorageError(
-                "Game id must be 1-64 characters of lowercase letters, numbers "
-                "and dashes, and cannot start or end with a dash."
-            )
+        base = slugify(name) or "game"
         with self._locked():
+            slug, n = base, 1
+            while self._game_dir(slug).exists():
+                n += 1
+                suffix = f"-{n}"
+                slug = base[: 64 - len(suffix)].rstrip("-") + suffix
             game_dir = self._game_dir(slug)
-            if game_dir.exists():
-                raise StorageError(f"A game with id '{slug}' already exists.")
             (game_dir / "versions").mkdir(parents=True)
             game = Game(slug=slug, name=name, created_at=_now())
             self._save_meta(game)

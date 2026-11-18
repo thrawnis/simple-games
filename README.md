@@ -147,7 +147,7 @@ can get from the app to the host machine.
 
 - Uploads must be `.html`/`.htm`, UTF-8 text, no binary data, within the size
   limit. Files are stored under server-generated names (`000001.html`), and
-  game ids are restricted to `a-z 0-9 -`, so path tricks like `../` are
+  game ids are generated from the name and restricted to `a-z 0-9 -`, so path tricks like `../` are
   impossible.
 - Games are served with a `Content-Security-Policy: sandbox` header **without**
   `allow-same-origin`. The game's JavaScript runs, but in an isolated,

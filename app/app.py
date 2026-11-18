@@ -301,11 +301,10 @@ def _uploaded_bytes() -> tuple[bytes, str]:
 @admin_required
 def create_game():
     name = request.form.get("name", "")
-    slug = request.form.get("slug", "")
     try:
         data, filename = _uploaded_bytes()
         validate_html(data, MAX_UPLOAD_KB * 1024)
-        game = storage.create_game(name, slug)
+        game = storage.create_game(name)
         storage.add_version(game.slug, data, MAX_UPLOAD_KB * 1024, filename, "Initial upload")
     except StorageError as e:
         flash(str(e), "error")

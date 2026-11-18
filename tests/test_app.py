@@ -135,12 +135,51 @@ def test_rejects_bad_uploads(client):
     assert len(list((client.data_dir / "games/game/versions").iterdir())) == 1
 
 
-@pytest.mark.parametrize("slug", ["../etc", "..", "a/b", "a b", "-x", "x-", "x" * 70, "%2e%2e"])
-def test_bad_slugs(client, slug):
+@pytest.mark.parametrize(
+    "name, expected",
+    [
+        ("Space Invaders!", "space-invaders"),
+        ("  Café  Déjà Vu  ", "cafe-deja-vu"),
+        ("Snake & Ladders 2", "snake-ladders-2"),
+        ("../../etc/passwd", "etc-passwd"),
+        ("%2e%2e", "2e-2e"),
+        ("日本語", "game"),          # nothing URL-safe left -> fallback
+        ("!!!", "game"),
+        ("x" * 100, "x" * 64),
+    ],
+)
+def test_slug_is_auto_assigned_and_url_safe(client, name, expected):
     login(client)
-    create(client, "Name", slug)
-    assert [p.name for p in (client.data_dir / "games").iterdir()] == []
-    assert client.get(f"/play/{slug}").status_code == 404
+    create(client, name)
+    assert [p.name for p in (client.data_dir / "games").iterdir()] == [expected]
+    assert client.get(f"/play/{expected}").status_code == 200
+
+
+def test_submitted_slug_is_ignored(client):
+    login(client)
+    create(client, "My Game", "../evil")
+    assert [p.name for p in (client.data_dir / "games").iterdir()] == ["my-game"]
+
+
+def test_duplicate_names_get_numbered_ids(client):
+    login(client)
+    for _ in range(3):
+        create(client, "Pong")
+    create(client, "x" * 100)
+    create(client, "x" * 100)
+    names = sorted(p.name for p in (client.data_dir / "games").iterdir())
+    assert names == sorted(["pong", "pong-2", "pong-3", "x" * 64, "x" * 62 + "-2"])
+    assert client.get("/play/pong-3").status_code == 200
+
+
+def test_bad_urls_404(client):
+    for slug in ["..", "a b", "-x", "x-", "x" * 70, "%2e%2e"]:
+        assert client.get(f"/play/{slug}").status_code == 404
+
+
+def test_create_form_has_no_id_field(client):
+    login(client)
+    assert 'name="slug"' not in client.get("/admin").get_data(as_text=True)
 
 
 def test_delete(client):
