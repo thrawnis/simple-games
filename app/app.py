@@ -49,7 +49,7 @@ DATA_DIR = os.environ.get("DATA_DIR", "/data")
 MAX_UPLOAD_KB = _env_int("MAX_UPLOAD_KB", 5120)
 KEEP_VERSIONS = _env_int("KEEP_VERSIONS", 50)
 SITE_TITLE = os.environ.get("SITE_TITLE", "Simple Games")
-SESSION_HOURS = _env_int("ADMIN_SESSION_HOURS", 2)
+SESSION_HOURS = _env_int("ADMIN_SESSION_HOURS", 1)
 COOKIE_SECURE = _env_bool("COOKIE_SECURE", True)
 # Requests through Cloudflare (Tunnel) always carry Cloudflare's headers,
 # which visitors cannot strip. By default the admin area is refused for them,

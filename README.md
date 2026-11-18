@@ -119,7 +119,7 @@ password; keep it `chmod 600` and never commit it (it is git-ignored).
 | `SITE_TITLE` | `Simple Games` | Shown in the header |
 | `MAX_UPLOAD_KB` | `5120` | Max size of one HTML file (also raise `client_max_body_size` in `nginx.conf` if you go above ~5.5 MB) |
 | `KEEP_VERSIONS` | `50` | Versions kept per game |
-| `ADMIN_SESSION_HOURS` | `2` | Admin login lifetime |
+| `ADMIN_SESSION_HOURS` | `1` | Admin login lifetime |
 | `LOGIN_MAX_FAILURES` / `LOGIN_LOCKOUT_MINUTES` | `5` / `15` | Lock out an IP after repeated wrong passwords |
 | `GAMES_ALLOW_EXTERNAL_RESOURCES` | `false` | Let games load files / call APIs over https |
 
